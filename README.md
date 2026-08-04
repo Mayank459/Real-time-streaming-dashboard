@@ -1,11 +1,14 @@
 # Real-Time E-Commerce Streaming Analytics Platform 🚀
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Grafana_Dashboard-green?style=for-the-badge&logo=grafana)](http://13.60.250.242:3000/d/ecommerce-streaming-v1/e-commerce-real-time-streaming-dashboard?orgId=1&refresh=5s)
 [![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-7.5.0-red?style=for-the-badge&logo=apachekafka)](https://kafka.apache.org/)
 [![Apache Spark](https://img.shields.io/badge/Apache_Spark-3.5.1-E25A1C?style=for-the-badge&logo=apachespark)](https://spark.apache.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.0-4169E1?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
 [![Grafana](https://img.shields.io/badge/Grafana-10.2.0-F46800?style=for-the-badge&logo=grafana)](https://grafana.com/)
 [![Docker](https://img.shields.io/badge/Docker_Compose-3.8-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)](https://www.python.org/)
+
+> 🌟 **[Click Here to Access Live Interactive Dashboard](http://13.60.250.242:3000/d/ecommerce-streaming-v1/e-commerce-real-time-streaming-dashboard?orgId=1&refresh=5s)** *(Username: `admin` | Password: `admin123`)*
 
 A production-grade, end-to-end real-time streaming pipeline simulating a high-throughput e-commerce platform. The system ingests **~100 events/second** across multiple streams (Orders, Payments, Clicks, Reviews), performs distributed real-time processing and aggregation using **Spark Structured Streaming**, guarantees **idempotent storage** in **PostgreSQL**, and visualizes live operational metrics via an auto-provisioned **Grafana Dashboard**.
 
@@ -160,9 +163,10 @@ docker exec -d spark-master bash -c "PYTHONPATH=/opt/bitnami/spark/work /tmp/run
 
 | Service | Access URL | Credentials | Description |
 | :--- | :--- | :--- | :--- |
-| **Grafana Dashboard** | [http://localhost:3000](http://localhost:3000) | `admin` / `admin123` | Executive KPI dashboard refreshing every 5s |
-| **Kafka UI** | [http://localhost:8080](http://localhost:8080) | None | Visual topic inspection, consumer groups & message view |
-| **Spark Master UI** | [http://localhost:8081](http://localhost:8081) | None | Spark cluster state, active streaming queries & workers |
+| 📊 **Live Grafana Dashboard** | **[http://13.60.250.242:3000/...](http://13.60.250.242:3000/d/ecommerce-streaming-v1/e-commerce-real-time-streaming-dashboard?orgId=1&refresh=5s)** | `admin` / `admin123` | Executive KPI dashboard refreshing live every 5s |
+| 🔍 **Kafka UI (AWS Cloud)** | **[http://13.60.250.242:8080](http://13.60.250.242:8080)** | None | Visual topic inspection, consumer groups & message view |
+| ⚡ **Spark Master UI (AWS Cloud)** | **[http://13.60.250.242:8081](http://13.60.250.242:8081)** | None | Spark cluster state, active streaming queries & workers |
+| 🏠 *Local Grafana* | `http://localhost:3000` | `admin` / `admin123` | Local development dashboard instance |
 
 ---
 
@@ -183,7 +187,7 @@ pytest tests/ -v
 - **Fault Tolerance**: Implemented **10-minute watermarking** for out-of-order records and a **Dead Letter Queue (DLQ)** pattern for schema violations.
 - **Data Integrity**: Designed an **idempotent PostgreSQL sink** using `ON CONFLICT DO NOTHING` to guarantee consistency across micro-batch retries.
 - **Resource Optimization**: Utilized **HyperLogLog algorithms (`approx_count_distinct`)** to prevent unbounded memory growth during streaming state maintenance.
-- **DevOps & Containerization**: Fully automated local environment deployment with **Docker Compose**, custom health checks, and service dependency ordering.
+- **DevOps & Cloud Deployment**: Deployed fully containerized architecture on **AWS EC2** with Docker Compose, automated health checks, and public KPI monitoring.
 
 ---
 

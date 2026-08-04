@@ -1,0 +1,219 @@
+
+
+networks:
+  streaming-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  grafana_data:
+
+services:
+
+  # ─────────────────────────────────────────────
+  # ZOOKEEPER – Kafka coordination
+  # ─────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    networks:
+      - streaming-net
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # KAFKA BROKER – Message queue
+  # ─────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    networks:
+      - streaming-net
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 4
+      KAFKA_NUM_PARTITIONS: 3
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # KAFKA TOPIC INITIALIZER – Creates all topics
+  # ─────────────────────────────────────────────
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-init
+    networks:
+      - streaming-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command:
+      - /bin/bash
+      - -c
+      - >-
+        echo 'Waiting for Kafka...' &&
+        sleep 8 &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic orders &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic payments &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic clicks &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic reviews &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic dlq &&
+        echo 'All topics created!' &&
+        kafka-topics --list --bootstrap-server kafka:9092
+
+  # ─────────────────────────────────────────────
+  # KAFKA UI – Visual management (localhost:8080)
+  # ─────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    networks:
+      - streaming-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # POSTGRESQL – Data sink (localhost:5432)
+  # ─────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    networks:
+      - streaming-net
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ecommerce_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # GRAFANA – Dashboards (localhost:3000)
+  # ─────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    networks:
+      - streaming-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: "grafana-worldmap-panel,grafana-piechart-panel"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../dashboard/grafana/provisioning:/etc/grafana/provisioning
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # SPARK MASTER – Cluster head (localhost:8081)
+  # ─────────────────────────────────────────────
+  spark-master:
+    image: bitnamilegacy/spark:3.5.1
+    container_name: spark-master
+    networks:
+      - streaming-net
+    environment:
+      SPARK_MODE: master
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+    ports:
+      - "8081:8080"
+      - "7077:7077"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # SPARK WORKER – Processing (localhost:8082)
+  # ─────────────────────────────────────────────
+  spark-worker:
+    image: bitnamilegacy/spark:3.5.1
+    container_name: spark-worker
+    networks:
+      - streaming-net
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 4G
+      SPARK_WORKER_CORES: 2
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+    ports:
+      - "8082:8081"
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # PRODUCER – Python event generator
+  # ─────────────────────────────────────────────
+  producer:
+    build:
+      context: ..
+      dockerfile: producer/Dockerfile
+    container_name: producer
+    networks:
+      - streaming-net
+    depends_on:
+      - kafka-init
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EVENTS_PER_SECOND: 100
+      LOG_LEVEL: INFO
+    volumes:
+      - ../logs:/app/logs
+    restart: unless-stopped

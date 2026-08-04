@@ -1,234 +1,192 @@
-# Real-Time E-Commerce Streaming Analytics Platform
+# Real-Time E-Commerce Streaming Analytics Platform 🚀
 
-> A production-grade real-time data pipeline that simulates an e-commerce platform where users continuously generate events (orders, payments, clicks, reviews). The pipeline processes millions of events using Apache Kafka and Spark Structured Streaming, stores analytics in PostgreSQL, and visualizes live KPIs on Grafana.
+[![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-7.5.0-red?style=for-the-badge&logo=apachekafka)](https://kafka.apache.org/)
+[![Apache Spark](https://img.shields.io/badge/Apache_Spark-3.5.1-E25A1C?style=for-the-badge&logo=apachespark)](https://spark.apache.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.0-4169E1?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+[![Grafana](https://img.shields.io/badge/Grafana-10.2.0-F46800?style=for-the-badge&logo=grafana)](https://grafana.com/)
+[![Docker](https://img.shields.io/badge/Docker_Compose-3.8-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)](https://www.python.org/)
 
-![Architecture](screenshots/architecture.png)
-
----
-
-## ⭐ Highlights
-
-- **100 events/second** across 4 Kafka topics
-- **Spark Structured Streaming** with watermarks, tumbling windows, and stream-stream joins
-- **Dead Letter Queue** for bad/invalid events
-- **Auto-provisioned Grafana dashboard** with 11 live panels
-- **Fully containerized** — one command to start everything
-- **ZooKeeper mode** Kafka (production-realistic)
+A production-grade, end-to-end real-time streaming pipeline simulating a high-throughput e-commerce platform. The system ingests **~100 events/second** across multiple streams (Orders, Payments, Clicks, Reviews), performs distributed real-time processing and aggregation using **Spark Structured Streaming**, guarantees **idempotent storage** in **PostgreSQL**, and visualizes live operational metrics via an auto-provisioned **Grafana Dashboard**.
 
 ---
 
-## 🏗️ Architecture
+## 📌 Executive Summary
 
+Modern e-commerce enterprises require instant visibility into operational metrics—such as order volume, revenue per minute, payment success/failure rates, and regional traffic. Traditional batch architectures introduce latencies of hours or days, delaying critical decision-making. 
+
+This platform demonstrates an enterprise-grade **Event-Driven Architecture (EDA)** built to address latency, idempotency, fault tolerance, and high throughput without data loss.
+
+---
+
+## 🏗️ End-to-End Pipeline Architecture
+
+```text
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │                        FAKER DATA GENERATOR                              │
+ │   Generates ~100 events/sec across Orders, Payments, Clicks & Reviews    │
+ └────────────────────────────────────┬─────────────────────────────────────┘
+                                      │
+                                      ▼
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │                   APACHE KAFKA BROKER (ZooKeeper Mode)                   │
+ │   Topics: [ orders ]  [ payments ]  [ clicks ]  [ reviews ]  [ dlq ]     │
+ └────────────────────────────────────┬─────────────────────────────────────┘
+                                      │
+                                      ▼
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │                     SPARK STRUCTURED STREAMING ENGINE                     │
+ │   • Schema Validation & Cleaning   • 10-Min Event-Time Watermarking    │
+ │   • Deduplication & Filtering      • Tumbling Window Aggregations        │
+ │   • Stream-Stream Joins            • HyperLogLog Approx Count Distinct   │
+ └──────────────────┬────────────────────────────────────┬──────────────────┘
+                    │                                    │
+           (Valid Transformed Data)            (Malformed/Bad Records)
+                    │                                    │
+                    ▼                                    ▼
+ ┌──────────────────────────────────────┐  ┌────────────────────────────────┐
+ │         POSTGRESQL DATABASE          │  │       DEAD LETTER QUEUE        │
+ │ • Raw Tables (Idempotent ON CONFLICT)│  │ • Quarantine bad payload & err │
+ │ • Real-Time Aggregation Views & Tables│  └────────────────────────────────┘
+ └──────────────────┬───────────────────┘
+                    │
+                    ▼
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │                         GRAFANA DASHBOARD                                │
+ │   • 11 Live Panels  • Auto-refresh 5s  • Pre-provisioned Datasources      │
+ └──────────────────────────────────────────────────────────────────────────┘
 ```
-Users (Python Faker)
-       │
-  Python Producers (4 threads, 100 events/sec)
-       │
-┌──────▼──────────────────────────────────────┐
-│           Apache Kafka (ZooKeeper Mode)      │
-│  orders │ payments │ clicks │ reviews │ dlq  │
-└──────┬──────────────────────────────────────┘
-       │
-  Spark Structured Streaming
-  ├─ Clean & Validate
-  ├─ Deduplicate
-  ├─ Tumbling Window (1 min)
-  ├─ Revenue by Country
-  ├─ Top Products
-  └─ Payment Stats
-       │
-  PostgreSQL Database
-  ├─ orders, payments, clicks, reviews (raw)
-  ├─ analytics_per_minute (aggregated)
-  ├─ revenue_by_country, top_products
-  └─ dead_letter_queue (invalid events)
-       │
-  Grafana Dashboard (auto-refresh 5s)
-  ├─ Revenue / Orders / Users stats
-  ├─ Revenue trend (line chart)
-  ├─ Orders/min (bar chart)
-  ├─ Top 10 Products
-  ├─ Payment method split (donut)
-  ├─ Revenue by Country (table)
-  └─ DLQ error monitor
-```
 
 ---
 
-## 🛠️ Tech Stack
+## ⭐ Technical Highlights & Engineering Decisions
 
-| Component        | Technology               | Version |
-|-----------------|--------------------------|---------|
-| Message Broker   | Apache Kafka (ZooKeeper) | 7.5.0   |
-| Stream Processing| Apache Spark Structured  | 3.5.0   |
-| Database         | PostgreSQL               | 15      |
-| Dashboards       | Grafana                  | 10.2.0  |
-| Data Generation  | Python + Faker           | 3.11    |
-| Containerization | Docker + Compose         | latest  |
+### 1. High-Throughput Event Generation (Python + Faker)
+- Multi-threaded Python producer outputting **100 events/sec** distributed across 4 distinct Kafka topics (`orders`: 35%, `payments`: 30%, `clicks`: 25%, `reviews`: 10%).
+- Implements non-blocking delivery callbacks, snappy compression, and retry logic with exponential backoff.
+
+### 2. Stream Processing & Watermarking (PySpark)
+- **Watermarking (10 mins)**: Handles late-arriving out-of-order events gracefully in streaming aggregations.
+- **Tumbling Windows (1 min)**: Computes real-time sales velocity, revenue per minute, and transaction counts.
+- **HyperLogLog (`approx_count_distinct`)**: Replaced standard `COUNT(DISTINCT)` to maintain bounded memory overhead in streaming state stores.
+
+### 3. Idempotent Data Ingestion (`ON CONFLICT DO NOTHING`)
+- Prevents duplicate record ingestion upon Spark micro-batch retries or job restarts.
+- Custom psycopg2 batch sink guarantees **at-least-once delivery with end-to-end exactly-once processing semantics** at the database layer.
+
+### 4. Dead Letter Queue (DLQ) Strategy
+- Schema violations and corrupted messages are quarantined into a dedicated `dead_letter_queue` table alongside error reasons, isolating processing failures without crashing streaming queries.
 
 ---
 
-## 📁 Folder Structure
+## 🛠️ Technology Stack
 
-```
-blend360/
+| Layer | Tool / Technology | Version | Function |
+| :--- | :--- | :--- | :--- |
+| **Data Generation** | Python + Faker | 3.11 / 22.0 | Synthetic e-commerce user interaction streaming |
+| **Message Broker** | Apache Kafka + ZooKeeper | 7.5.0 (Confluent) | Distributed event log and message queueing |
+| **Stream Engine** | Apache Spark Structured Streaming | 3.5.1 | Real-time cleaning, transformations, and windowing |
+| **Database** | PostgreSQL | 15-alpine | Primary relational store for raw events and aggregate KPIs |
+| **Visualization** | Grafana | 10.2.0 | Live monitoring and executive dashboards |
+| **Orchestration** | Docker & Docker Compose | 3.8 | Container management, network bridging, and health checks |
+
+---
+
+## 📁 Repository Structure
+
+```text
+Real-time-streaming-dashboard/
 ├── producer/
-│   ├── fake_data.py        # Generates realistic e-commerce events
-│   ├── producer.py         # Multi-threaded Kafka producer
-│   └── Dockerfile
+│   ├── fake_data.py          # Synthetic event generation engine (Orders, Payments, Clicks, Reviews)
+│   ├── producer.py           # Multi-threaded Kafka event producer with metrics & callbacks
+│   └── Dockerfile            # Container definition for data producer
 ├── spark/
-│   ├── spark_stream.py     # Main Spark Streaming job
-│   └── transformations.py  # Pure transformation functions
+│   ├── spark_stream.py       # Main Structured Streaming job (Micro-batch & JDBC ingestion)
+│   └── transformations.py    # Pure, testable PySpark transformation functions
 ├── database/
-│   ├── init.sql            # PostgreSQL schema (auto-runs on startup)
-│   └── insert.py           # Batch insert helpers
+│   ├── init.sql              # Schema creation, index tuning, and view definitions
+│   └── insert.py             # Batch insertion utilities with retry logic
 ├── dashboard/
-│   └── grafana/provisioning/
-│       ├── datasources/postgres.yml
-│       └── dashboards/ecommerce.json
+│   └── grafana/provisioning/ # Auto-provisioned Grafana datasources and pre-built dashboard JSON
 ├── docker/
-│   └── docker-compose.yml  # All 8 services
+│   └── docker-compose.yml    # Orchestration of all 8 core services
 ├── config/
-│   ├── kafka_config.py
-│   └── db_config.py
+│   ├── kafka_config.py       # Broker addresses, topic settings, and distribution rates
+│   └── db_config.py          # Database parameters, connection pool, and JDBC settings
 ├── tests/
-│   ├── test_fake_data.py
-│   └── test_transformations.py
-├── logs/
-├── .env
-└── requirements.txt
+│   ├── test_fake_data.py     # Unit tests for event generators and distribution logic
+│   └── test_transformations.py # PySpark transformations testing (Local mode)
+├── .env                      # Environment variable specifications
+├── requirements.txt          # Python dependencies
+└── README.md                 # Project documentation
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Deployment Guide
 
 ### Prerequisites
-- Docker Desktop (running)
-- 16 GB RAM recommended
-- Python 3.11+ (for local development)
+- **Docker Desktop** installed and running
+- **Minimum 8 GB RAM** (16 GB recommended)
+- **Git**
 
-### Step 1 — Start all containers
-
+### Step 1: Clone Repository
 ```bash
-cd d:\blend360\docker
-docker compose up -d
+git clone https://github.com/Mayank459/Real-time-streaming-dashboard.git
+cd Real-time-streaming-dashboard
 ```
 
-Wait ~60 seconds for all services to be healthy.
+### Step 2: Spin Up Infrastructure
+```bash
+cd docker
+docker compose up -d --build
+```
+*This starts ZooKeeper, Kafka, Kafka-UI, PostgreSQL, Grafana, Spark Master, Spark Worker, and the Producer container.*
 
-### Step 2 — Verify containers
-
+### Step 3: Verify Running Services
 ```bash
 docker ps
 ```
+Ensure all 8 containers are in an `Up` / `Healthy` state.
 
-You should see 8 containers running:
-- `zookeeper`
-- `kafka`
-- `kafka-init` (exits after creating topics)
-- `kafka-ui`
-- `postgres`
-- `grafana`
-- `spark-master`
-- `spark-worker`
-- `producer`
-
-### Step 3 — Open Kafka UI
-
-Visit [http://localhost:8080](http://localhost:8080)
-
-You should see 4 topics: `orders`, `payments`, `clicks`, `reviews`
-
-### Step 4 — Submit the Spark Job
-
+### Step 4: Submit Spark Streaming Job
 ```bash
-docker exec spark-master spark-submit \
-  --master spark://spark-master:7077 \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.6.0 \
-  /opt/bitnami/spark/work/spark_stream.py
+docker exec -d spark-master bash -c "PYTHONPATH=/opt/bitnami/spark/work /tmp/run_spark.sh"
 ```
-
-### Step 5 — Open Grafana Dashboard
-
-Visit [http://localhost:3000](http://localhost:3000)
-
-Login: `admin` / `admin123`
-
-Navigate to **Dashboards → E-Commerce Real-Time Streaming Dashboard**
 
 ---
 
-## 🧪 Run Tests
+## 📊 Live Monitoring Interfaces
 
-Install dependencies locally:
+| Service | Access URL | Credentials | Description |
+| :--- | :--- | :--- | :--- |
+| **Grafana Dashboard** | [http://localhost:3000](http://localhost:3000) | `admin` / `admin123` | Executive KPI dashboard refreshing every 5s |
+| **Kafka UI** | [http://localhost:8080](http://localhost:8080) | None | Visual topic inspection, consumer groups & message view |
+| **Spark Master UI** | [http://localhost:8081](http://localhost:8081) | None | Spark cluster state, active streaming queries & workers |
+
+---
+
+## 🧪 Unit Testing
+
+Run unit tests locally using `pytest`:
 
 ```bash
 pip install -r requirements.txt
-```
-
-Run all tests:
-
-```bash
 pytest tests/ -v
 ```
 
 ---
 
-## 📊 Grafana Dashboard Panels
+## 📝 Key Interview & Resume Highlights
 
-| Panel | Type | Description |
-|-------|------|-------------|
-| Total Revenue | Stat | Running revenue last hour |
-| Total Orders | Stat | Order count last hour |
-| Unique Users | Stat | Distinct users last hour |
-| Events/min | Stat | Real-time event rate |
-| Revenue Trend | Time Series | Per-minute revenue line |
-| Orders/Minute | Bar Chart | Order volume bars |
-| Top 10 Products | Bar Chart | Horizontal revenue bars |
-| Payment Methods | Donut Chart | UPI/Card/COD split |
-| Revenue by Country | Table | Country leaderboard |
-| Payment Success/Fail | Time Series | Success vs failure trend |
-| Dead Letter Queue | Table | Invalid events monitor |
+- **Stream Architecture**: Engineered an event-driven data pipeline handling **100+ events/sec** using Apache Kafka and Spark Structured Streaming.
+- **Fault Tolerance**: Implemented **10-minute watermarking** for out-of-order records and a **Dead Letter Queue (DLQ)** pattern for schema violations.
+- **Data Integrity**: Designed an **idempotent PostgreSQL sink** using `ON CONFLICT DO NOTHING` to guarantee consistency across micro-batch retries.
+- **Resource Optimization**: Utilized **HyperLogLog algorithms (`approx_count_distinct`)** to prevent unbounded memory growth during streaming state maintenance.
+- **DevOps & Containerization**: Fully automated local environment deployment with **Docker Compose**, custom health checks, and service dependency ordering.
 
 ---
 
-## 🔧 Configuration
+## 📜 License
 
-All configuration is in `.env`:
-
-```env
-KAFKA_BOOTSTRAP_SERVERS=localhost:29092
-EVENTS_PER_SECOND=100
-DB_HOST=localhost
-DB_PASSWORD=admin123
-```
-
----
-
-## 🐞 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Kafka not starting | Wait 60s, check `docker logs kafka` |
-| Topics not created | Re-run `docker compose up kafka-init` |
-| No data in Grafana | Ensure producer is running (`docker logs producer`) |
-| Spark job fails | Check JDBC driver version matches PostgreSQL |
-| Port conflict | Change ports in `docker-compose.yml` |
-
----
-
-## 📝 Resume Points
-
-- Designed and implemented a real-time streaming pipeline processing **100+ events/sec** using **Apache Kafka** (ZooKeeper mode) and **Spark Structured Streaming**
-- Built a multi-threaded Python **Kafka producer** simulating realistic e-commerce events across 4 topics
-- Implemented **tumbling window aggregations**, **watermarking** for late data, and **stream-stream joins** in PySpark
-- Deployed a **Dead Letter Queue** pattern for invalid/malformed events
-- Containerized all 8 services with **Docker Compose** including health checks and dependency ordering
-- Created an auto-provisioned **Grafana dashboard** with 11 live KPI panels refreshing every 5 seconds
-
----
-
-## 📄 License
-
-MIT License — Free to use for learning and portfolio purposes.
+Distributed under the MIT License. See `LICENSE` for more information.

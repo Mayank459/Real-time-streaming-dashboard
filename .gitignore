@@ -34,5 +34,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Virtual environments
+# Virtual environments & secrets
 .env
+*.pem

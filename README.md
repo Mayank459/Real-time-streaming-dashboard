@@ -35,8 +35,8 @@ This platform demonstrates an enterprise-grade **Event-Driven Architecture (EDA)
                                       │
                                       ▼
  ┌──────────────────────────────────────────────────────────────────────────┐
- │                     SPARK STRUCTURED STREAMING ENGINE                     │
- │   • Schema Validation & Cleaning   • 10-Min Event-Time Watermarking    │
+ │                     SPARK STRUCTURED STREAMING ENGINE                    │
+ │   • Schema Validation & Cleaning   • 10-Min Event-Time Watermarking      │
  │   • Deduplication & Filtering      • Tumbling Window Aggregations        │
  │   • Stream-Stream Joins            • HyperLogLog Approx Count Distinct   │
  └──────────────────┬────────────────────────────────────┬──────────────────┘
@@ -44,16 +44,16 @@ This platform demonstrates an enterprise-grade **Event-Driven Architecture (EDA)
            (Valid Transformed Data)            (Malformed/Bad Records)
                     │                                    │
                     ▼                                    ▼
- ┌──────────────────────────────────────┐  ┌────────────────────────────────┐
- │         POSTGRESQL DATABASE          │  │       DEAD LETTER QUEUE        │
- │ • Raw Tables (Idempotent ON CONFLICT)│  │ • Quarantine bad payload & err │
- │ • Real-Time Aggregation Views & Tables│  └────────────────────────────────┘
- └──────────────────┬───────────────────┘
+ ┌───────────────────────────────────────┐   ┌────────────────────────────────┐
+ │         POSTGRESQL DATABASE           │   │       DEAD LETTER QUEUE        │
+ │ • Raw Tables (Idempotent ON CONFLICT) │   │ • Quarantine bad payload & err │
+ │ • Real-Time Aggregation Views & Tables│   └────────────────────────────────┘
+ └──────────────────┬────────────────────┘
                     │
                     ▼
  ┌──────────────────────────────────────────────────────────────────────────┐
  │                         GRAFANA DASHBOARD                                │
- │   • 11 Live Panels  • Auto-refresh 5s  • Pre-provisioned Datasources      │
+ │   • 11 Live Panels  • Auto-refresh 5s  • Pre-provisioned Datasources     │
  └──────────────────────────────────────────────────────────────────────────┘
 ```
 

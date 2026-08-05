@@ -25,7 +25,7 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "💰 Total Revenue (Last Hour)",
+      "title": "💰 Total Revenue",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
       "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
       "fieldConfig": {
@@ -53,7 +53,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COALESCE(SUM(total_amount), 0) AS \"Revenue\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 hour'",
+        "rawSql": "SELECT COALESCE(SUM(total_amount), 0) AS \"Revenue\" FROM orders",
         "format": "table",
         "refId": "A"
       }]
@@ -62,7 +62,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "📦 Total Orders (Last Hour)",
+      "title": "📦 Total Orders",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
       "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
       "fieldConfig": {
@@ -85,7 +85,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COUNT(*) AS \"Orders\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 hour'",
+        "rawSql": "SELECT COUNT(*) AS \"Orders\" FROM orders",
         "format": "table",
         "refId": "A"
       }]
@@ -94,7 +94,7 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "👥 Unique Users (Last Hour)",
+      "title": "👥 Unique Users",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
       "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
       "fieldConfig": {
@@ -115,7 +115,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COUNT(DISTINCT user_id) AS \"Users\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 hour'",
+        "rawSql": "SELECT COUNT(DISTINCT user_id) AS \"Users\" FROM orders",
         "format": "table",
         "refId": "A"
       }]
@@ -145,7 +145,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COUNT(*) AS \"Events/min\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 minute'",
+        "rawSql": "SELECT COUNT(*) AS \"Events/min\" FROM orders WHERE ingested_at > NOW() - INTERVAL '1 minute'",
         "format": "table",
         "refId": "A"
       }]
@@ -176,7 +176,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT DATE_TRUNC('minute', event_timestamp) AS time, SUM(total_amount) AS \"Revenue (₹)\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
+        "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, SUM(total_amount) AS \"Revenue (₹)\" FROM orders WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
         "format": "time_series",
         "refId": "A"
       }]
@@ -204,7 +204,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT DATE_TRUNC('minute', event_timestamp) AS time, COUNT(*) AS \"Orders\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 hour' GROUP BY 1 ORDER BY 1",
+        "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, COUNT(*) AS \"Orders\" FROM orders WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
         "format": "time_series",
         "refId": "A"
       }]
@@ -230,7 +230,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT product_name, SUM(total_amount) AS \"Revenue (₹)\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 hour' GROUP BY product_name ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
+        "rawSql": "SELECT product_name, SUM(total_amount) AS \"Revenue (₹)\" FROM orders GROUP BY product_name ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
         "format": "table",
         "refId": "A"
       }]
@@ -256,7 +256,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT payment_type AS \"Method\", COUNT(*) AS \"Count\" FROM payments WHERE event_timestamp > NOW() - INTERVAL '1 hour' GROUP BY payment_type ORDER BY \"Count\" DESC",
+        "rawSql": "SELECT payment_type AS \"Method\", COUNT(*) AS \"Count\" FROM payments GROUP BY payment_type ORDER BY \"Count\" DESC",
         "format": "table",
         "refId": "A"
       }]
@@ -281,7 +281,7 @@
       },
       "targets": [{
         "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT country AS \"Country\", ROUND(SUM(total_amount)::numeric, 2) AS \"Revenue (₹)\", COUNT(*) AS \"Orders\" FROM orders WHERE event_timestamp > NOW() - INTERVAL '1 hour' GROUP BY country ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
+        "rawSql": "SELECT country AS \"Country\", ROUND(SUM(total_amount)::numeric, 2) AS \"Revenue (₹)\", COUNT(*) AS \"Orders\" FROM orders GROUP BY country ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
         "format": "table",
         "refId": "A"
       }]
@@ -304,7 +304,7 @@
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-          "rawSql": "SELECT DATE_TRUNC('minute', event_timestamp) AS time, COUNT(*) FILTER (WHERE status='success') AS \"Success\", COUNT(*) FILTER (WHERE status='failed') AS \"Failed\" FROM payments WHERE event_timestamp > NOW() - INTERVAL '1 hour' GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, COUNT(*) FILTER (WHERE status='success') AS \"Success\", COUNT(*) FILTER (WHERE status='failed') AS \"Failed\" FROM payments WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
           "format": "time_series",
           "refId": "A"
         }
@@ -332,10 +332,10 @@
   "schemaVersion": 38,
   "tags": ["ecommerce", "streaming", "kafka", "spark"],
   "templating": { "list": [] },
-  "time": { "from": "now-1h", "to": "now" },
+  "time": { "from": "now-2h", "to": "now" },
   "timepicker": {},
-  "timezone": "Asia/Kolkata",
+  "timezone": "browser",
   "title": "E-Commerce Real-Time Streaming Dashboard",
   "uid": "ecommerce-streaming-v1",
-  "version": 1
+  "version": 2
 }

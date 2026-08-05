@@ -62,6 +62,7 @@ def create_spark_session() -> SparkSession:
     spark = (
         SparkSession.builder
         .appName("ECommerceStreamingPipeline")
+        .config("spark.sql.session.timeZone", "UTC")
         .config("spark.sql.shuffle.partitions", "4")           # Low for local/small cluster
         .config("spark.streaming.stopGracefullyOnShutdown", "true")
         .config("spark.sql.streaming.checkpointLocation", "/tmp/spark_checkpoints")

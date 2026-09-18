@@ -10,10 +10,22 @@
     }
   ],
   "__requires": [
-    { "type": "grafana",    "id": "grafana",  "name": "Grafana",    "version": "10.0.0" },
-    { "type": "datasource", "id": "postgres", "name": "PostgreSQL", "version": "1.0.0"  }
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "version": "1.0.0"
+    }
   ],
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -21,23 +33,41 @@
   "links": [],
   "liveNow": false,
   "panels": [
-
     {
       "id": 1,
       "type": "stat",
       "title": "💰 Total Revenue",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyINR",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 50000 },
-              { "color": "red",    "value": 200000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50000
+              },
+              {
+                "color": "red",
+                "value": 200000
+              }
             ]
           },
           "mappings": []
@@ -45,122 +75,209 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "orientation": "auto",
         "textMode": "auto",
         "colorMode": "background",
         "graphMode": "none"
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COALESCE(SUM(total_amount), 0) AS \"Revenue\" FROM orders",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT COALESCE(SUM(total_amount), 0) AS \"Revenue\" FROM orders",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 2,
       "type": "stat",
       "title": "📦 Total Orders",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COUNT(*) AS \"Orders\" FROM orders",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT COUNT(*) AS \"Orders\" FROM orders",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 3,
       "type": "stat",
       "title": "👥 Unique Users",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "purple", "value": null }]
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COUNT(DISTINCT user_id) AS \"Users\" FROM orders",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT COUNT(DISTINCT user_id) AS \"Users\" FROM orders",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 4,
       "type": "stat",
       "title": "⚡ Events in Last Minute",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "orange", "value": null }]
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT COUNT(*) AS \"Events/min\" FROM orders WHERE ingested_at > NOW() - INTERVAL '1 minute'",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT COUNT(*) AS \"Events/min\" FROM orders WHERE ingested_at > NOW() - INTERVAL '1 minute'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 5,
       "type": "timeseries",
       "title": "📈 Revenue Trend (Per Minute)",
-      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyINR",
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 10,
@@ -171,27 +288,46 @@
         "overrides": []
       },
       "options": {
-        "tooltip": { "mode": "multi" },
-        "legend": { "displayMode": "list", "placement": "bottom" }
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, SUM(total_amount) AS \"Revenue (₹)\" FROM orders WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
-        "format": "time_series",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, SUM(total_amount) AS \"Revenue (₹)\" FROM orders WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 6,
       "type": "barchart",
       "title": "📊 Orders Per Minute",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": []
       },
@@ -200,179 +336,356 @@
         "groupWidth": 0.7,
         "orientation": "auto",
         "xTickLabelRotation": -45,
-        "legend": { "displayMode": "list", "placement": "bottom" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, COUNT(*) AS \"Orders\" FROM orders WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
-        "format": "time_series",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, COUNT(*) AS \"Orders\" FROM orders WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 7,
       "type": "barchart",
       "title": "🏆 Top 10 Products by Revenue",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyINR",
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": []
       },
       "options": {
         "orientation": "horizontal",
         "barWidth": 0.8,
-        "legend": { "displayMode": "list", "placement": "bottom" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT product_name, SUM(total_amount) AS \"Revenue (₹)\" FROM orders GROUP BY product_name ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT product_name, SUM(total_amount) AS \"Revenue (₹)\" FROM orders GROUP BY product_name ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 8,
       "type": "piechart",
       "title": "💳 Payment Methods",
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 12 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 12
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": []
       },
       "options": {
         "pieType": "donut",
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT payment_type AS \"Method\", COUNT(*) AS \"Count\" FROM payments GROUP BY payment_type ORDER BY \"Count\" DESC",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT payment_type AS \"Method\", COUNT(*) AS \"Count\" FROM payments GROUP BY payment_type ORDER BY \"Count\" DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 9,
       "type": "table",
       "title": "🌍 Revenue by Country (Top 10)",
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 12 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 12
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
-        "defaults": { "unit": "currencyINR" },
+        "defaults": {
+          "unit": "currencyINR"
+        },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Country" },     "properties": [{ "id": "custom.width", "value": 120 }] },
-          { "matcher": { "id": "byName", "options": "Revenue (₹)" }, "properties": [{ "id": "unit", "value": "currencyINR" }] }
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Country"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Revenue (₹)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyINR"
+              }
+            ]
+          }
         ]
       },
       "options": {
         "showHeader": true,
-        "sortBy": [{ "displayName": "Revenue (₹)", "desc": true }]
+        "sortBy": [
+          {
+            "displayName": "Revenue (₹)",
+            "desc": true
+          }
+        ]
       },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT country AS \"Country\", ROUND(SUM(total_amount)::numeric, 2) AS \"Revenue (₹)\", COUNT(*) AS \"Orders\" FROM orders GROUP BY country ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
-        "format": "table",
-        "refId": "A"
-      }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT country AS \"Country\", ROUND(SUM(total_amount)::numeric, 2) AS \"Revenue (₹)\", COUNT(*) AS \"Orders\" FROM orders GROUP BY country ORDER BY \"Revenue (₹)\" DESC LIMIT 10",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 10,
       "type": "timeseries",
       "title": "📉 Payment Success vs Failure Rate",
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 20 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2, "fillOpacity": 5 }
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
           "rawSql": "SELECT DATE_TRUNC('minute', ingested_at) AS time, COUNT(*) FILTER (WHERE status='success') AS \"Success\", COUNT(*) FILTER (WHERE status='failed') AS \"Failed\" FROM payments WHERE ingested_at > NOW() - INTERVAL '2 hours' GROUP BY 1 ORDER BY 1",
           "format": "time_series",
           "refId": "A"
         }
       ]
     },
-
     {
       "id": 11,
       "type": "table",
       "title": "🚨 Dead Letter Queue (Recent Errors)",
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 20 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "options": { "showHeader": true },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT ingested_at AS \"Time\", topic AS \"Topic\", error_reason AS \"Error\", LEFT(raw_message, 100) AS \"Message Preview\" FROM dead_letter_queue ORDER BY ingested_at DESC LIMIT 20",
-        "format": "table",
-        "refId": "A"
-      }]
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT ingested_at AS \"Time\", topic AS \"Topic\", error_reason AS \"Error\", LEFT(raw_message, 100) AS \"Message Preview\" FROM dead_letter_queue ORDER BY ingested_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     },
-
     {
       "id": 12,
       "type": "timeseries",
       "title": "⚡ End-to-End Streaming Latency (p50, p95, p99)",
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
           "rawSql": "SELECT minute AS time, p50_latency_ms AS \"p50 (ms)\", p95_latency_ms AS \"p95 (ms)\", p99_latency_ms AS \"p99 (ms)\" FROM v_latency_stats ORDER BY 1",
           "format": "time_series",
           "refId": "A"
         }
       ]
     },
-
     {
       "id": 13,
       "type": "table",
       "title": "🤖 ML Anomaly Alerts (Isolation Forest)",
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 26 },
-      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "options": { "showHeader": true },
-      "targets": [{
-        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
-        "rawSql": "SELECT detected_at AS \"Detected At\", severity AS \"Severity\", metric_name AS \"Metric\", current_value AS \"Current Value\", description AS \"Anomaly Details\", anomaly_score AS \"Score\" FROM v_anomaly_alerts ORDER BY detected_at DESC LIMIT 20",
-        "format": "table",
-        "refId": "A"
-      }]
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "rawSql": "SELECT detected_at AS \"Detected At\", severity AS \"Severity\", metric_name AS \"Metric\", current_value AS \"Current Value\", description AS \"Anomaly Details\", anomaly_score AS \"Score\" FROM v_anomaly_alerts ORDER BY detected_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
     }
-
   ],
   "refresh": "5s",
   "schemaVersion": 38,
-  "tags": ["ecommerce", "streaming", "kafka", "spark", "machine-learning"],
-  "templating": { "list": [] },
-  "time": { "from": "now-2h", "to": "now" },
+  "tags": [
+    "ecommerce",
+    "streaming",
+    "kafka",
+    "spark",
+    "machine-learning"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "browser",
   "title": "E-Commerce Real-Time Streaming Dashboard",

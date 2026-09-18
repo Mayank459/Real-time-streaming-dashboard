@@ -13,13 +13,17 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092"
 # ─────────────────────────────────────────────
 # Topic Names
 # ─────────────────────────────────────────────
-TOPIC_ORDERS   = "orders"
-TOPIC_PAYMENTS = "payments"
-TOPIC_CLICKS   = "clicks"
-TOPIC_REVIEWS  = "reviews"
-TOPIC_DLQ      = "dlq"
+TOPIC_ORDERS          = "orders"
+TOPIC_PAYMENTS        = "payments"
+TOPIC_CLICKS          = "clicks"
+TOPIC_REVIEWS         = "reviews"
+TOPIC_DLQ             = "dlq"
+TOPIC_ORDERS_RETRY    = "orders_retry"
+TOPIC_PAYMENTS_RETRY  = "payments_retry"
 
 ALL_TOPICS = [TOPIC_ORDERS, TOPIC_PAYMENTS, TOPIC_CLICKS, TOPIC_REVIEWS]
+RETRY_TOPICS = [TOPIC_ORDERS_RETRY, TOPIC_PAYMENTS_RETRY]
+
 
 # ─────────────────────────────────────────────
 # Producer Settings

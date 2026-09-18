@@ -17,8 +17,14 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
     StructType, StructField,
-    StringType, DoubleType, IntegerType, BooleanType, TimestampType
+    StringType, DoubleType, IntegerType, LongType, BooleanType, TimestampType
 )
+
+
+# ─────────────────────────────────────────────
+# Supported Schema Versions
+# ─────────────────────────────────────────────
+SUPPORTED_SCHEMA_VERSIONS = ["1.0"]
 
 
 # ─────────────────────────────────────────────
@@ -26,57 +32,65 @@ from pyspark.sql.types import (
 # ─────────────────────────────────────────────
 
 ORDER_SCHEMA = StructType([
-    StructField("event_type",   StringType(),  True),
-    StructField("order_id",     StringType(),  True),
-    StructField("user_id",      StringType(),  True),
-    StructField("product_id",   StringType(),  True),
-    StructField("product_name", StringType(),  True),
-    StructField("category",     StringType(),  True),
-    StructField("price",        DoubleType(),  True),
-    StructField("quantity",     IntegerType(), True),
-    StructField("total_amount", DoubleType(),  True),
-    StructField("country",      StringType(),  True),
-    StructField("device",       StringType(),  True),
-    StructField("browser",      StringType(),  True),
-    StructField("status",       StringType(),  True),
-    StructField("timestamp",    StringType(),  True),
+    StructField("event_type",         StringType(),  True),
+    StructField("schema_version",     StringType(),  True),
+    StructField("order_id",           StringType(),  True),
+    StructField("user_id",            StringType(),  True),
+    StructField("product_id",         StringType(),  True),
+    StructField("product_name",       StringType(),  True),
+    StructField("category",           StringType(),  True),
+    StructField("price",              DoubleType(),  True),
+    StructField("quantity",           IntegerType(), True),
+    StructField("total_amount",       DoubleType(),  True),
+    StructField("country",            StringType(),  True),
+    StructField("device",             StringType(),  True),
+    StructField("browser",            StringType(),  True),
+    StructField("status",             StringType(),  True),
+    StructField("timestamp",          StringType(),  True),
+    StructField("event_timestamp_ms", LongType(),    True),
 ])
 
 PAYMENT_SCHEMA = StructType([
-    StructField("event_type",    StringType(), True),
-    StructField("payment_id",    StringType(), True),
-    StructField("order_id",      StringType(), True),
-    StructField("user_id",       StringType(), True),
-    StructField("payment_type",  StringType(), True),
-    StructField("amount",        DoubleType(), True),
-    StructField("status",        StringType(), True),
-    StructField("gateway",       StringType(), True),
-    StructField("timestamp",     StringType(), True),
+    StructField("event_type",         StringType(), True),
+    StructField("schema_version",     StringType(), True),
+    StructField("payment_id",         StringType(), True),
+    StructField("order_id",           StringType(), True),
+    StructField("user_id",            StringType(), True),
+    StructField("payment_type",       StringType(), True),
+    StructField("amount",             DoubleType(), True),
+    StructField("status",             StringType(), True),
+    StructField("gateway",            StringType(), True),
+    StructField("timestamp",          StringType(), True),
+    StructField("event_timestamp_ms", LongType(),   True),
 ])
 
 CLICK_SCHEMA = StructType([
-    StructField("event_type",   StringType(),  True),
-    StructField("click_id",     StringType(),  True),
-    StructField("user_id",      StringType(),  True),
-    StructField("product_id",   StringType(),  True),
-    StructField("session_id",   StringType(),  True),
-    StructField("page",         StringType(),  True),
-    StructField("action",       StringType(),  True),
-    StructField("duration_sec", IntegerType(), True),
-    StructField("device",       StringType(),  True),
-    StructField("timestamp",    StringType(),  True),
+    StructField("event_type",         StringType(),  True),
+    StructField("schema_version",     StringType(),  True),
+    StructField("click_id",           StringType(),  True),
+    StructField("user_id",            StringType(),  True),
+    StructField("product_id",         StringType(),  True),
+    StructField("session_id",         StringType(),  True),
+    StructField("page",               StringType(),  True),
+    StructField("action",             StringType(),  True),
+    StructField("duration_sec",       IntegerType(), True),
+    StructField("device",             StringType(),  True),
+    StructField("timestamp",          StringType(),  True),
+    StructField("event_timestamp_ms", LongType(),    True),
 ])
 
 REVIEW_SCHEMA = StructType([
-    StructField("event_type",   StringType(),  True),
-    StructField("review_id",    StringType(),  True),
-    StructField("user_id",      StringType(),  True),
-    StructField("product_id",   StringType(),  True),
-    StructField("product_name", StringType(),  True),
-    StructField("rating",       IntegerType(), True),
-    StructField("sentiment",    StringType(),  True),
-    StructField("verified",     BooleanType(), True),
-    StructField("timestamp",    StringType(),  True),
+    StructField("event_type",         StringType(),  True),
+    StructField("schema_version",     StringType(),  True),
+    StructField("review_id",          StringType(),  True),
+    StructField("user_id",            StringType(),  True),
+    StructField("product_id",         StringType(),  True),
+    StructField("product_name",       StringType(),  True),
+    StructField("rating",             IntegerType(), True),
+    StructField("sentiment",          StringType(),  True),
+    StructField("verified",           BooleanType(), True),
+    StructField("timestamp",          StringType(),  True),
+    StructField("event_timestamp_ms", LongType(),    True),
 ])
 
 
@@ -112,11 +126,40 @@ def parse_kafka_stream(raw_df: DataFrame, schema: StructType) -> DataFrame:
 # Cleaning Functions
 # ─────────────────────────────────────────────
 
+def _enrich_timestamps_and_latency(df: DataFrame) -> DataFrame:
+    """Helper to parse event_timestamp and compute pipeline_latency_ms."""
+    df = df.withColumn("event_timestamp", F.to_timestamp(F.col("timestamp")))
+    
+    if "event_timestamp_ms" in df.columns:
+        df = df.withColumn(
+            "pipeline_latency_ms",
+            F.when(
+                F.col("event_timestamp_ms").isNotNull() & (F.col("event_timestamp_ms") > 0),
+                F.greatest(F.lit(0), (F.unix_timestamp(F.current_timestamp()) * 1000 - F.col("event_timestamp_ms")).cast(IntegerType()))
+            ).otherwise(
+                F.greatest(F.lit(0), (F.unix_timestamp(F.current_timestamp()) - F.unix_timestamp(F.col("event_timestamp"))) * 1000).cast(IntegerType())
+            )
+        )
+    else:
+        df = df.withColumn(
+            "pipeline_latency_ms",
+            F.greatest(F.lit(0), (F.unix_timestamp(F.current_timestamp()) - F.unix_timestamp(F.col("event_timestamp"))) * 1000).cast(IntegerType())
+        )
+
+    if "schema_version" in df.columns:
+        df = df.withColumn("schema_version", F.coalesce(F.col("schema_version"), F.lit("1.0")))
+    else:
+        df = df.withColumn("schema_version", F.lit("1.0"))
+
+    return df
+
+
 def clean_orders(df: DataFrame) -> tuple[DataFrame, DataFrame]:
     """
     Clean and validate orders.
 
     Validations:
+        - schema_version in supported versions
         - order_id, user_id, product_id must not be null
         - price > 0 and total_amount > 0
         - quantity >= 1
@@ -125,15 +168,11 @@ def clean_orders(df: DataFrame) -> tuple[DataFrame, DataFrame]:
     Returns:
         (valid_df, invalid_df) — split into good and bad rows
     """
-    # Parse timestamp
-    df = df.withColumn(
-        "event_timestamp",
-        F.to_timestamp(F.col("timestamp"))
-    )
+    df = _enrich_timestamps_and_latency(df)
 
-    # Define validity condition
     valid_condition = (
-        F.col("order_id").isNotNull()
+        F.col("schema_version").isin(SUPPORTED_SCHEMA_VERSIONS)
+        & F.col("order_id").isNotNull()
         & F.col("user_id").isNotNull()
         & F.col("product_id").isNotNull()
         & (F.col("price") > 0)
@@ -143,15 +182,17 @@ def clean_orders(df: DataFrame) -> tuple[DataFrame, DataFrame]:
         & F.col("category").isNotNull()
     )
 
+    drop_cols = [c for c in ["timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp", "event_timestamp_ms"] if c in df.columns]
+
     valid_df = (
         df.filter(valid_condition)
         .dropDuplicates(["order_id"])
-        .drop("timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp")
+        .drop(*drop_cols)
     )
 
     invalid_df = (
         df.filter(~valid_condition)
-        .withColumn("error_reason", F.lit("Failed order validation"))
+        .withColumn("error_reason", F.lit("Failed order validation or incompatible schema_version"))
     )
 
     return valid_df, invalid_df
@@ -162,58 +203,69 @@ def clean_payments(df: DataFrame) -> tuple[DataFrame, DataFrame]:
     Clean and validate payment events.
 
     Validations:
+        - schema_version in supported versions
         - payment_id, order_id, user_id must not be null
         - amount > 0
         - status must be in (success, failed, pending)
     """
-    df = df.withColumn("event_timestamp", F.to_timestamp(F.col("timestamp")))
+    df = _enrich_timestamps_and_latency(df)
 
     valid_statuses = ["success", "failed", "pending"]
     valid_condition = (
-        F.col("payment_id").isNotNull()
+        F.col("schema_version").isin(SUPPORTED_SCHEMA_VERSIONS)
+        & F.col("payment_id").isNotNull()
         & F.col("order_id").isNotNull()
         & F.col("user_id").isNotNull()
         & (F.col("amount") > 0)
         & F.col("status").isin(valid_statuses)
     )
 
-    valid_df   = df.filter(valid_condition).dropDuplicates(["payment_id"]).drop("timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp")
-    invalid_df = df.filter(~valid_condition).withColumn("error_reason", F.lit("Failed payment validation"))
+    drop_cols = [c for c in ["timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp", "event_timestamp_ms"] if c in df.columns]
+
+    valid_df   = df.filter(valid_condition).dropDuplicates(["payment_id"]).drop(*drop_cols)
+    invalid_df = df.filter(~valid_condition).withColumn("error_reason", F.lit("Failed payment validation or incompatible schema_version"))
 
     return valid_df, invalid_df
 
 
 def clean_clicks(df: DataFrame) -> tuple[DataFrame, DataFrame]:
     """Clean and validate click events."""
-    df = df.withColumn("event_timestamp", F.to_timestamp(F.col("timestamp")))
+    df = _enrich_timestamps_and_latency(df)
 
     valid_condition = (
-        F.col("click_id").isNotNull()
+        F.col("schema_version").isin(SUPPORTED_SCHEMA_VERSIONS)
+        & F.col("click_id").isNotNull()
         & F.col("user_id").isNotNull()
         & F.col("session_id").isNotNull()
     )
 
-    valid_df   = df.filter(valid_condition).dropDuplicates(["click_id"]).drop("timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp")
-    invalid_df = df.filter(~valid_condition).withColumn("error_reason", F.lit("Failed click validation"))
+    drop_cols = [c for c in ["timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp", "event_timestamp_ms"] if c in df.columns]
+
+    valid_df   = df.filter(valid_condition).dropDuplicates(["click_id"]).drop(*drop_cols)
+    invalid_df = df.filter(~valid_condition).withColumn("error_reason", F.lit("Failed click validation or incompatible schema_version"))
 
     return valid_df, invalid_df
 
 
 def clean_reviews(df: DataFrame) -> tuple[DataFrame, DataFrame]:
     """Clean and validate review events."""
-    df = df.withColumn("event_timestamp", F.to_timestamp(F.col("timestamp")))
+    df = _enrich_timestamps_and_latency(df)
 
     valid_condition = (
-        F.col("review_id").isNotNull()
+        F.col("schema_version").isin(SUPPORTED_SCHEMA_VERSIONS)
+        & F.col("review_id").isNotNull()
         & F.col("user_id").isNotNull()
         & F.col("product_id").isNotNull()
         & F.col("rating").between(1, 5)
     )
 
-    valid_df   = df.filter(valid_condition).dropDuplicates(["review_id"]).drop("timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp")
-    invalid_df = df.filter(~valid_condition).withColumn("error_reason", F.lit("Failed review validation"))
+    drop_cols = [c for c in ["timestamp", "event_type", "topic", "partition", "offset", "kafka_timestamp", "event_timestamp_ms"] if c in df.columns]
+
+    valid_df   = df.filter(valid_condition).dropDuplicates(["review_id"]).drop(*drop_cols)
+    invalid_df = df.filter(~valid_condition).withColumn("error_reason", F.lit("Failed review validation or incompatible schema_version"))
 
     return valid_df, invalid_df
+
 
 
 # ─────────────────────────────────────────────

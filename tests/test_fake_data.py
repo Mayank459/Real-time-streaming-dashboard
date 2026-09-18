@@ -25,11 +25,13 @@ class TestOrderEvent:
         self.event = generate_order_event()
 
     def test_required_fields_present(self):
-        required = ["order_id", "user_id", "product_id", "product_name",
+        required = ["schema_version", "order_id", "user_id", "product_id", "product_name",
                     "category", "price", "quantity", "total_amount",
-                    "country", "device", "browser", "status", "timestamp"]
+                    "country", "device", "browser", "status", "timestamp", "event_timestamp_ms"]
         for field in required:
             assert field in self.event, f"Missing field: {field}"
+        assert self.event["schema_version"] == "1.0"
+        assert self.event["event_timestamp_ms"] > 0
 
     def test_price_positive(self):
         assert self.event["price"] > 0
@@ -71,10 +73,12 @@ class TestPaymentEvent:
         self.event = generate_payment_event()
 
     def test_required_fields_present(self):
-        required = ["payment_id", "order_id", "user_id", "payment_type",
-                    "amount", "status", "timestamp"]
+        required = ["schema_version", "payment_id", "order_id", "user_id", "payment_type",
+                    "amount", "status", "timestamp", "event_timestamp_ms"]
         for field in required:
             assert field in self.event, f"Missing field: {field}"
+        assert self.event["schema_version"] == "1.0"
+        assert self.event["event_timestamp_ms"] > 0
 
     def test_amount_positive(self):
         assert self.event["amount"] > 0
@@ -103,10 +107,12 @@ class TestClickEvent:
         self.event = generate_click_event()
 
     def test_required_fields_present(self):
-        required = ["click_id", "user_id", "product_id", "session_id",
-                    "page", "action", "timestamp"]
+        required = ["schema_version", "click_id", "user_id", "product_id", "session_id",
+                    "page", "action", "timestamp", "event_timestamp_ms"]
         for field in required:
             assert field in self.event, f"Missing field: {field}"
+        assert self.event["schema_version"] == "1.0"
+        assert self.event["event_timestamp_ms"] > 0
 
     def test_page_is_valid(self):
         valid_pages = ["home", "search", "product", "cart", "checkout", "wishlist"]
@@ -126,10 +132,12 @@ class TestReviewEvent:
         self.event = generate_review_event()
 
     def test_required_fields_present(self):
-        required = ["review_id", "user_id", "product_id", "rating",
-                    "sentiment", "verified", "timestamp"]
+        required = ["schema_version", "review_id", "user_id", "product_id", "rating",
+                    "sentiment", "verified", "timestamp", "event_timestamp_ms"]
         for field in required:
             assert field in self.event, f"Missing field: {field}"
+        assert self.event["schema_version"] == "1.0"
+        assert self.event["event_timestamp_ms"] > 0
 
     def test_rating_between_1_and_5(self):
         assert 1 <= self.event["rating"] <= 5

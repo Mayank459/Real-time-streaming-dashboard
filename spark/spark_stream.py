@@ -118,17 +118,55 @@ _CONFLICT_COLS = {
 }
 
 
+def _write_partition_records(partition_iter, table: str, conflict_col: str | None, db_params: dict):
+    """
+    Worker-side distributed partition writer.
+    Reuses a single connection per partition to eliminate connection thrashing.
+    Uses ON CONFLICT DO NOTHING for idempotent ingestion.
+    """
+    import psycopg2
+    import psycopg2.extras
+
+    rows = [row.asDict() for row in partition_iter]
+    if not rows:
+        return
+
+    columns      = list(rows[0].keys())
+    col_str      = ", ".join(f'"{c}"' for c in columns)
+    placeholders = ", ".join(["%s"] * len(columns))
+    values       = [[row[c] for c in columns] for row in rows]
+
+    conflict_clause = f"ON CONFLICT ({conflict_col}) DO NOTHING" if conflict_col else ""
+    sql = f"INSERT INTO {table} ({col_str}) VALUES ({placeholders}) {conflict_clause};"
+
+    conn = psycopg2.connect(
+        host=db_params["host"],
+        port=db_params["port"],
+        dbname=db_params["dbname"],
+        user=db_params["user"],
+        password=db_params["password"],
+        connect_timeout=10,
+    )
+    try:
+        with conn.cursor() as cur:
+            psycopg2.extras.execute_batch(cur, sql, values, page_size=500)
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def write_to_postgres(batch_df, batch_id: int, table: str, mode: str = "append"):
     """
-    Idempotent micro-batch writer using psycopg2 executemany.
-    Uses ON CONFLICT DO NOTHING for tables with a unique key — safe on retries/replays.
-    Falls back to JDBC overwrite for aggregation tables (mode='overwrite').
-    Called by foreachBatch.
+    Scalable micro-batch writer:
+    - For mode='overwrite' (aggregations): writes using Spark JDBC overwrite.
+    - For mode='append' (raw streams): executes distributed writes across workers using
+      rdd.foreachPartition with psycopg2 execute_batch and ON CONFLICT DO NOTHING.
+      Zero driver memory bottleneck.
     """
     if batch_df.isEmpty():
         return
 
-    # Aggregation tables are always fully replaced — use JDBC overwrite
+    # Aggregation tables are overwritten via JDBC
     if mode == "overwrite":
         try:
             (
@@ -148,40 +186,26 @@ def write_to_postgres(batch_df, batch_id: int, table: str, mode: str = "append")
             logger.error(f"[batch={batch_id}] Overwrite failed for {table}: {e}")
         return
 
-    # Raw event tables — use psycopg2 with ON CONFLICT DO NOTHING (idempotent)
+    # Raw event tables — distributed partition writes across executors
     try:
-        import psycopg2
-        import psycopg2.extras
         from config.db_config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
-        rows = [row.asDict() for row in batch_df.collect()]
-        if not rows:
-            return
+        db_params = {
+            "host": DB_HOST,
+            "port": DB_PORT,
+            "dbname": DB_NAME,
+            "user": DB_USER,
+            "password": DB_PASSWORD,
+        }
+        conflict_col = _CONFLICT_COLS.get(table)
 
-        columns      = list(rows[0].keys())
-        col_str      = ", ".join(f'"{c}"' for c in columns)
-        placeholders = ", ".join(["%s"] * len(columns))
-        values       = [[row[c] for c in columns] for row in rows]
-
-        conflict_col  = _CONFLICT_COLS.get(table)
-        conflict_clause = f"ON CONFLICT ({conflict_col}) DO NOTHING" if conflict_col else ""
-
-        sql = f"INSERT INTO {table} ({col_str}) VALUES ({placeholders}) {conflict_clause};"
-
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-            user=DB_USER, password=DB_PASSWORD,
-            connect_timeout=10,
+        batch_df.rdd.foreachPartition(
+            lambda partition_iter: _write_partition_records(partition_iter, table, conflict_col, db_params)
         )
-        with conn.cursor() as cur:
-            psycopg2.extras.execute_batch(cur, sql, values, page_size=500)
-        conn.commit()
-        conn.close()
-
-        logger.info(f"[batch={batch_id}] Inserted {len(rows)} rows into {table} (idempotent)")
+        logger.info(f"[batch={batch_id}] Distributed write succeeded for table: {table}")
 
     except Exception as e:
-        logger.error(f"[batch={batch_id}] Failed writing to {table}: {e}")
+        logger.error(f"[batch={batch_id}] Distributed write failed for {table}: {e}")
         raise
 
 
@@ -202,7 +226,7 @@ def write_dlq_to_postgres(batch_df, batch_id: int, topic: str):
 def upsert_analytics(batch_df, batch_id: int):
     """
     Upsert analytics_per_minute using ON CONFLICT DO UPDATE.
-    Runs on the driver via psycopg2 (not on executors — safe for foreachBatch).
+    Runs on the driver via psycopg2 (small 1-minute window batches, typically <10 rows).
     Falls back to JDBC append if psycopg2 is unavailable.
     """
     if batch_df.isEmpty():
@@ -234,7 +258,7 @@ def upsert_analytics(batch_df, batch_id: int):
         """
 
         for row in rows:
-            r = row.asDict()          # ← convert Row → dict so .get() works
+            r = row.asDict()
             cur.execute(upsert_sql, (
                 r["window_start"],
                 r["window_end"],
@@ -265,12 +289,12 @@ def upsert_analytics(batch_df, batch_id: int):
 # ─────────────────────────────────────────────
 
 def start_orders_stream(spark: SparkSession):
-    """Start the orders streaming query."""
+    """Start the orders streaming query with sub-5s latency."""
     raw_df   = read_kafka_topic(spark, TOPIC_ORDERS)
     parsed   = parse_kafka_stream(raw_df, ORDER_SCHEMA)
     valid, invalid = clean_orders(parsed)
 
-    # Write raw valid orders
+    # Write raw valid orders (5s trigger)
     orders_q = (
         valid.writeStream
         .foreachBatch(lambda df, bid: write_to_postgres(df, bid, "orders"))
@@ -279,7 +303,7 @@ def start_orders_stream(spark: SparkSession):
         .start()
     )
 
-    # Write invalid orders to DLQ
+    # Write invalid orders to DLQ (10s trigger)
     dlq_q = (
         invalid.writeStream
         .foreachBatch(lambda df, bid: write_dlq_to_postgres(df, bid, TOPIC_ORDERS))
@@ -288,36 +312,36 @@ def start_orders_stream(spark: SparkSession):
         .start()
     )
 
-    # Per-minute analytics
+    # Per-minute analytics accelerated to 5-second trigger
     agg_df = orders_per_minute(valid)
     analytics_q = (
         agg_df.writeStream
         .outputMode("update")
         .foreachBatch(upsert_analytics)
         .option("checkpointLocation", "/tmp/spark_checkpoints/analytics")
-        .trigger(processingTime="30 seconds")
+        .trigger(processingTime="5 seconds")
         .start()
     )
 
-    # Revenue by country
+    # Revenue by country accelerated to 10-second trigger
     country_df = revenue_by_country(valid)
     country_q = (
         country_df.writeStream
         .outputMode("complete")
         .foreachBatch(lambda df, bid: write_to_postgres(df, bid, "revenue_by_country", "overwrite"))
         .option("checkpointLocation", "/tmp/spark_checkpoints/country")
-        .trigger(processingTime="30 seconds")
+        .trigger(processingTime="10 seconds")
         .start()
     )
 
-    # Top products
+    # Top products accelerated to 10-second trigger
     products_df = top_products(valid)
     products_q = (
         products_df.writeStream
         .outputMode("complete")
         .foreachBatch(lambda df, bid: write_to_postgres(df, bid, "top_products", "overwrite"))
         .option("checkpointLocation", "/tmp/spark_checkpoints/products")
-        .trigger(processingTime="30 seconds")
+        .trigger(processingTime="10 seconds")
         .start()
     )
 
@@ -346,14 +370,14 @@ def start_payments_stream(spark: SparkSession):
         .start()
     )
 
-    # Payment method stats
+    # Payment method stats accelerated to 5-second trigger
     stats_df = payment_method_stats(valid)
     stats_q = (
         stats_df.writeStream
         .outputMode("complete")
         .foreachBatch(lambda df, bid: write_to_postgres(df, bid, "payment_method_stats", "overwrite"))
         .option("checkpointLocation", "/tmp/spark_checkpoints/payment_stats")
-        .trigger(processingTime="30 seconds")
+        .trigger(processingTime="5 seconds")
         .start()
     )
 

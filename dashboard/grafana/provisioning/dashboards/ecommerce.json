@@ -325,17 +325,57 @@
         "format": "table",
         "refId": "A"
       }]
+    },
+
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "⚡ End-to-End Streaming Latency (p50, p95, p99)",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
+      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+          "rawSql": "SELECT minute AS time, p50_latency_ms AS \"p50 (ms)\", p95_latency_ms AS \"p95 (ms)\", p99_latency_ms AS \"p99 (ms)\" FROM v_latency_stats ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 13,
+      "type": "table",
+      "title": "🤖 ML Anomaly Alerts (Isolation Forest)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 26 },
+      "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "showHeader": true },
+      "targets": [{
+        "datasource": { "type": "postgres", "uid": "postgres-ecommerce" },
+        "rawSql": "SELECT detected_at AS \"Detected At\", severity AS \"Severity\", metric_name AS \"Metric\", current_value AS \"Current Value\", description AS \"Anomaly Details\", anomaly_score AS \"Score\" FROM v_anomaly_alerts ORDER BY detected_at DESC LIMIT 20",
+        "format": "table",
+        "refId": "A"
+      }]
     }
 
   ],
   "refresh": "5s",
   "schemaVersion": 38,
-  "tags": ["ecommerce", "streaming", "kafka", "spark"],
+  "tags": ["ecommerce", "streaming", "kafka", "spark", "machine-learning"],
   "templating": { "list": [] },
   "time": { "from": "now-2h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
   "title": "E-Commerce Real-Time Streaming Dashboard",
   "uid": "ecommerce-streaming-v1",
-  "version": 2
+  "version": 3
 }

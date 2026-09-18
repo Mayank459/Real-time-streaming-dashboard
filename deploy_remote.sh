@@ -7,10 +7,12 @@ sudo docker exec kafka kafka-topics --create --if-not-exists --bootstrap-server 
 sudo docker exec kafka kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic clicks || true
 sudo docker exec kafka kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic reviews || true
 sudo docker exec kafka kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic dlq || true
+sudo docker exec kafka kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic orders_retry || true
+sudo docker exec kafka kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 3 --topic payments_retry || true
 
-echo "=== 2. Installing psycopg2 on Spark containers ==="
-sudo docker exec spark-master pip install psycopg2-binary --quiet || true
-sudo docker exec spark-worker pip install psycopg2-binary --quiet || true
+echo "=== 2. Installing Python dependencies on Spark containers ==="
+sudo docker exec spark-master pip install psycopg2-binary scikit-learn --quiet || true
+sudo docker exec spark-worker pip install psycopg2-binary scikit-learn --quiet || true
 
 echo "=== 3. Setting up Spark Script on spark-master ==="
 sudo docker exec spark-master bash -c 'cat << "EOF" > /tmp/run_spark.sh

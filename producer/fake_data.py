@@ -86,6 +86,11 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _now_epoch_ms() -> int:
+    """Return current UTC timestamp in milliseconds."""
+    return int(datetime.now(timezone.utc).timestamp() * 1000)
+
+
 def _random_product() -> dict:
     """Pick a random product from the catalogue."""
     return random.choice(PRODUCTS)
@@ -119,20 +124,22 @@ def generate_order_event() -> dict:
     quantity = random.choices([1, 2, 3], weights=[0.75, 0.20, 0.05])[0]
 
     return {
-        "event_type":    "order",
-        "order_id":      str(uuid.uuid4()),
-        "user_id":       str(uuid.uuid4()),
-        "product_id":    product["id"],
-        "product_name":  product["name"],
-        "category":      product["category"],
-        "price":         price,
-        "quantity":      quantity,
-        "total_amount":  round(price * quantity, 2),
-        "country":       random.choice(COUNTRIES),
-        "device":        random.choices(DEVICES, weights=DEVICE_WEIGHTS)[0],
-        "browser":       random.choice(BROWSERS),
-        "status":        random.choices(ORDER_STATUSES, weights=[0.5, 0.2, 0.15, 0.1, 0.05])[0],
-        "timestamp":     _now_iso(),
+        "event_type":         "order",
+        "schema_version":     "1.0",
+        "order_id":           str(uuid.uuid4()),
+        "user_id":            str(uuid.uuid4()),
+        "product_id":         product["id"],
+        "product_name":       product["name"],
+        "category":           product["category"],
+        "price":              price,
+        "quantity":           quantity,
+        "total_amount":       round(price * quantity, 2),
+        "country":            random.choice(COUNTRIES),
+        "device":             random.choices(DEVICES, weights=DEVICE_WEIGHTS)[0],
+        "browser":            random.choice(BROWSERS),
+        "status":             random.choices(ORDER_STATUSES, weights=[0.5, 0.2, 0.15, 0.1, 0.05])[0],
+        "timestamp":          _now_iso(),
+        "event_timestamp_ms": _now_epoch_ms(),
     }
 
 
@@ -154,15 +161,17 @@ def generate_payment_event(order_id: str | None = None, user_id: str | None = No
         amount  = _random_price_variance(product["base_price"])
 
     return {
-        "event_type":    "payment",
-        "payment_id":    str(uuid.uuid4()),
-        "order_id":      order_id or str(uuid.uuid4()),
-        "user_id":       user_id  or str(uuid.uuid4()),
-        "payment_type":  payment_type,
-        "amount":        round(amount, 2),
-        "status":        status,
-        "gateway":       gateway,
-        "timestamp":     _now_iso(),
+        "event_type":         "payment",
+        "schema_version":     "1.0",
+        "payment_id":         str(uuid.uuid4()),
+        "order_id":           order_id or str(uuid.uuid4()),
+        "user_id":            user_id  or str(uuid.uuid4()),
+        "payment_type":       payment_type,
+        "amount":             round(amount, 2),
+        "status":             status,
+        "gateway":            gateway,
+        "timestamp":          _now_iso(),
+        "event_timestamp_ms": _now_epoch_ms(),
     }
 
 
@@ -176,16 +185,18 @@ def generate_click_event() -> dict:
     product = _random_product()
 
     return {
-        "event_type":    "click",
-        "click_id":      str(uuid.uuid4()),
-        "user_id":       str(uuid.uuid4()),
-        "product_id":    product["id"],
-        "session_id":    str(uuid.uuid4()),
-        "page":          random.choice(PAGES),
-        "action":        random.choice(ACTIONS),
-        "duration_sec":  random.randint(1, 300),
-        "device":        random.choices(DEVICES, weights=DEVICE_WEIGHTS)[0],
-        "timestamp":     _now_iso(),
+        "event_type":         "click",
+        "schema_version":     "1.0",
+        "click_id":           str(uuid.uuid4()),
+        "user_id":            str(uuid.uuid4()),
+        "product_id":         product["id"],
+        "session_id":         str(uuid.uuid4()),
+        "page":               random.choice(PAGES),
+        "action":             random.choice(ACTIONS),
+        "duration_sec":       random.randint(1, 300),
+        "device":             random.choices(DEVICES, weights=DEVICE_WEIGHTS)[0],
+        "timestamp":          _now_iso(),
+        "event_timestamp_ms": _now_epoch_ms(),
     }
 
 
@@ -200,15 +211,17 @@ def generate_review_event() -> dict:
     rating   = random.choices([1, 2, 3, 4, 5], weights=[0.05, 0.10, 0.15, 0.35, 0.35])[0]
 
     return {
-        "event_type":    "review",
-        "review_id":     str(uuid.uuid4()),
-        "user_id":       str(uuid.uuid4()),
-        "product_id":    product["id"],
-        "product_name":  product["name"],
-        "rating":        rating,
-        "sentiment":     SENTIMENTS[rating],
-        "verified":      random.choice([True, False]),
-        "timestamp":     _now_iso(),
+        "event_type":         "review",
+        "schema_version":     "1.0",
+        "review_id":          str(uuid.uuid4()),
+        "user_id":            str(uuid.uuid4()),
+        "product_id":         product["id"],
+        "product_name":       product["name"],
+        "rating":             rating,
+        "sentiment":          SENTIMENTS[rating],
+        "verified":           random.choice([True, False]),
+        "timestamp":          _now_iso(),
+        "event_timestamp_ms": _now_epoch_ms(),
     }
 
 

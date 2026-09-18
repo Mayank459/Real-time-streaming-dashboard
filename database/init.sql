@@ -180,10 +180,10 @@ BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'grafana_reader') THEN
         CREATE ROLE grafana_reader WITH LOGIN PASSWORD 'reader123';
     END IF;
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO grafana_reader', current_database());
 END
 $$;
 
-GRANT CONNECT ON DATABASE ecommerce_db TO grafana_reader;
 GRANT USAGE ON SCHEMA public TO grafana_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO grafana_reader;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO grafana_reader;

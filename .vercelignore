@@ -1,0 +1,14 @@
+.venv/
+requirements.txt
+docker/
+spark/
+ml/
+producer/
+database/
+config/
+tests/
+deploy_remote.sh
+deploy_to_aws.ps1
+deploy_to_aws.sh
+architecture_report.md
+IMPLEMENTATION_REPORT.md
